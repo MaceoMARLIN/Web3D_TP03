@@ -1,0 +1,137 @@
+<html>
+<head>
+    <title>exe3</title>
+    <meta charset="UTF-8">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+</head>
+<body>
+    <a-scene>
+        <a-plane position="0 -0.5 0" rotation="-90 0 0" width="10" height="10" color="#0C84E8"></a-plane>
+        <a-box id="player" position="0 0 0" rotation="0 0 0" color="#E8E40C" player-controls></a-box>
+        <a-entity id="orbitCam" camera orbit-camera="target: #player; distance: 10; height: 10"></a-entity>
+    </a-scene>
+    <script>
+    AFRAME.registerComponent('player-controls', {
+      schema: {},
+      init: function () {
+        this.velocity = {x: 0, y: 0, z: 0};
+        this.acceleration = 0.08;
+        this.deceleration = 0.06;
+        this.maxSpeed = 0.25;
+        this.keys = {w: false, a: false, s: false, d: false, space: false};
+        this.isOnGround = true;
+        this.jumpSpeed = 0.32;
+        this.gravity = 0.015;
+        window.addEventListener('keydown', e => {
+          if (e.code === 'KeyW') this.keys.w = true;
+          if (e.code === 'KeyA') this.keys.a = true;
+          if (e.code === 'KeyS') this.keys.s = true;
+          if (e.code === 'KeyD') this.keys.d = true;
+          if (e.code === 'Space') this.keys.space = true;
+        });
+        window.addEventListener('keyup', e => {
+          if (e.code === 'KeyW') this.keys.w = false;
+          if (e.code === 'KeyA') this.keys.a = false;
+          if (e.code === 'KeyS') this.keys.s = false;
+          if (e.code === 'KeyD') this.keys.d = false;
+          if (e.code === 'Space') this.keys.space = false;
+        });
+      },
+      
+      tick: function () {
+        let inputX = 0, inputZ = 0;
+        if (this.keys.w) inputZ -= 1;
+        if (this.keys.s) inputZ += 1;
+        if (this.keys.a) inputX -= 1;
+        if (this.keys.d) inputX += 1;
+
+        if (inputX !== 0 || inputZ !== 0) {
+          let len = Math.sqrt(inputX*inputX + inputZ*inputZ);
+          inputX /= len;
+          inputZ /= len;
+        }
+
+        this.velocity.x += inputX * this.acceleration;
+        this.velocity.z += inputZ * this.acceleration;
+
+        this.velocity.x = Math.max(-this.maxSpeed, Math.min(this.maxSpeed, this.velocity.x));
+        this.velocity.z = Math.max(-this.maxSpeed, Math.min(this.maxSpeed, this.velocity.z));
+
+        if (!this.keys.a && !this.keys.d) {
+          if (Math.abs(this.velocity.x) < this.deceleration) this.velocity.x = 0;
+          else this.velocity.x -= Math.sign(this.velocity.x) * this.deceleration;
+        }
+        if (!this.keys.w && !this.keys.s) {
+          if (Math.abs(this.velocity.z) < this.deceleration) this.velocity.z = 0;
+          else this.velocity.z -= Math.sign(this.velocity.z) * this.deceleration;
+        }
+
+        let pos = this.el.object3D.position;
+        if (this.keys.space && this.isOnGround) {
+          this.velocity.y = this.jumpSpeed;
+          this.isOnGround = false;
+        }
+        
+        if (!this.isOnGround) {
+          this.velocity.y -= this.gravity;
+        }
+
+        pos.x += this.velocity.x;
+        pos.z += this.velocity.z;
+        pos.y += this.velocity.y;
+
+        if (pos.y <= 0) {
+          pos.y = 0;
+          this.velocity.y = 0;
+          this.isOnGround = true;
+        }
+      }
+    });
+
+    AFRAME.registerComponent('orbit-camera', {
+  schema: {
+    target: {type: 'selector'},
+    distance: {default: 8},
+    height: {default: 3}
+  },
+  init: function () {
+    this.theta = Math.PI / 2; // angle horizontal (90°)
+    this.isDragging = false;
+    this.lastX = 0;
+    this.sensitivity = 0.012;
+    this.el.sceneEl.addEventListener('renderstart', () => {
+      const canvas = this.el.sceneEl.canvas;
+      canvas.addEventListener('mousedown', e => {
+        if (e.button === 0) {
+          this.isDragging = true;
+          this.lastX = e.clientX;
+        }
+      });
+      window.addEventListener('mousemove', e => {
+        if (this.isDragging) {
+          let dx = e.clientX - this.lastX;
+          this.lastX = e.clientX;
+          this.theta -= dx * this.sensitivity;
+        }
+      });
+      window.addEventListener('mouseup', () => { this.isDragging = false; });
+    });
+  },
+  tick: function () {
+    const target = this.data.target.object3D.position;
+    const r = this.data.distance;
+    const h = this.data.height;
+    // Calcul position orbitale autour du cube
+    const camX = target.x + r * Math.cos(this.theta);
+    const camY = target.y + h;
+    const camZ = target.z + r * Math.sin(this.theta);
+    this.el.object3D.position.set(camX, camY, camZ);
+    const camera = this.el.getObject3D('camera');
+    if (camera) {
+      camera.lookAt(target.x, target.y, target.z);
+    }
+  }
+});
+    </script>
+</body>
+</html>
