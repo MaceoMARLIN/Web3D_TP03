@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Web3D Plan & Skybox</title>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+    <script>
+        // Scène, caméra, rendu
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Sol avec texture d'herbe
+        const textureLoader = new THREE.TextureLoader();
+        const grassTexture = textureLoader.load('grass.jpg');
+        const planeMaterial = new THREE.MeshStandardMaterial({ map: grassTexture });
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        scene.add(plane);
+
+        // Lumière
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+
+        // Skybox panoramique (equirectangulaire)
+        textureLoader.load('sky.png', function(texture) {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            scene.background = texture;
+        });
+
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
